@@ -1,0 +1,4 @@
+interface:
+  display_name: "Subagent Orchestration"
+  short_description: "Orchestrate native Codex subagents by tier"
+  default_prompt: "Use $subagent-orchestration to delegate native Codex subagents with the requested tier."
