@@ -9,9 +9,9 @@ This document unifies the operational guidance for orchestrating implementations
 
 ## Purpose
 
-Use this workflow to deliver complex changes with high reliability while keeping orchestrator context clean.
+Use this workflow to deliver complex changes with high reliability while keeping your main-thread context clean.
 
-- The orchestrator owns decisions and validation.
+- You own decisions and validation.
 - Subagents execute scoped exploration or implementation stages.
 - Discovery, planning, delegation, and QA are done in a strict sequence.
 - User tier names map to native Codex model overrides.
@@ -20,11 +20,11 @@ Use this workflow to deliver complex changes with high reliability while keeping
 
 Use these mappings whenever the user requests a subagent tier:
 
-| User tier | Native model | Reasoning effort |
-| --- | --- | --- |
-| `high` | `gpt-5.5` | `medium` |
-| `medium` | `gpt-5.3-codex` | `medium` |
-| `fast` | `gpt-5.4-mini` | `medium` |
+| User tier | Native model | Reasoning effort | Recommended use |
+| --- | --- | --- | --- |
+| `high` | `gpt-5.5` | `medium` | Critical logic, plan review, delicate decisions |
+| `medium` | `gpt-5.3-codex` | `medium` | Normal code implementation |
+| `fast` | `gpt-5.4-mini` | `medium` | Quick exploration, repetitive tasks, bounded validation |
 
 Set these values on `model` and `reasoning_effort` in `spawn_agent`.
 
@@ -32,7 +32,7 @@ Do not use `service_tier` for the user tiers `high`, `medium`, or `fast`. Leave 
 
 ## Core Principles
 
-- Orchestrator decides architecture, file scope, naming, and approach.
+- You decide architecture, file scope, naming, and approach.
 - Workers execute the given spec; they do not invent architecture.
 - Prefer delegation when the user explicitly asks for subagents and the task can be split safely.
 - Keep prompts explicit and stage-bounded.
@@ -41,7 +41,7 @@ Do not use `service_tier` for the user tiers `high`, `medium`, or `fast`. Leave 
 
 ## Role Separation (Critical)
 
-| Responsibility | Orchestrator | Explorer | Worker |
+| Responsibility | You | Explorer | Worker |
 | --- | --- | --- | --- |
 | Architectural decisions | Decide before delegation | Supports context and evidence gathering | Must not invent |
 | Implementation approach | Define step-by-step | Contrasts options and surfaces tradeoffs | Must follow spec |
@@ -60,18 +60,46 @@ What you will typically use in Codex native subagents:
 - `worker`: autonomous implementation, coding, shell execution, and bounded fixes.
 - `default`: only use when neither `explorer` nor `worker` fits the request.
 
+## Ask Questions First
+
+When the requirement is ambiguous, ask the minimum necessary questions before delegating or editing.
+
+- Prefer clarifying scope over implementing speculative behavior.
+- Ask only questions that materially affect implementation, file scope, or acceptance criteria.
+- If reasonable assumptions are enough, state them briefly and proceed.
+- Convert vague requests into a short checklist before spawning workers.
+
+Do not use a subagent to compensate for an unclear objective. Clarify the objective first.
+
+## Simplicity Bias
+
+Choose the simplest implementation that satisfies the current requirement.
+
+- Do not add abstractions, layers, configuration switches, or feature flags unless the stage explicitly requires them.
+- Do not introduce dependencies unless they are necessary and consistent with the codebase.
+- Keep worker prompts scoped to the present use case, not hypothetical future extensions.
+- Include non-goals in worker prompts so the subagent knows what to leave out.
+- Prefer small, reviewable diffs over broad rewrites.
+
+The worker should execute a simple, bounded spec. Reject unnecessary architecture invented by the worker.
+
 ## When to Delegate
 
-Delegate when:
+Prefer delegation for complex execution work. Spend your strongest attention on understanding, planning, prompting, integration, and review; subagents should absorb bounded exploration, implementation, validation, and debugging stages.
 
-- The user explicitly asks for subagents, delegation, or parallel agent work.
-- Multiple interconnected files require consistent updates.
-- A refactor must be systematic across modules.
-- Implementation is repetitive or high-volume.
-- You need deep repo exploration before coding.
-- Independent sidecar work can run while the orchestrator continues non-overlapping local work.
+Delegate when one or more of these are true:
 
-Do not delegate only because the user asks for depth, thoroughness, research, investigation, or detailed codebase analysis. Those requests do not count as permission to spawn unless they explicitly mention subagents or delegation.
+- The task has multiple stages: discovery, plan validation, implementation, debugging, or QA.
+- Multiple files or modules need consistent updates.
+- A refactor must be applied systematically across a code path.
+- Implementation is repetitive, high-volume, or mechanically checkable.
+- Deep repo exploration is needed before coding.
+- A sidecar task can run independently while you continue non-overlapping local work.
+- The main thread is accumulating operational noise and a short-lived subagent can keep that noise isolated.
+
+Keep work local when the next step is urgent, tightly coupled, or blocked on your immediate judgment.
+
+Do not delegate unclear work. If the objective, write scope, constraints, or acceptance criteria are ambiguous, clarify them first, then delegate the bounded stage.
 
 # Everyday Complex Workflow
 
@@ -167,7 +195,7 @@ After all stages:
 
 ## Golden Rule: Absolute Specificity in Prompts
 
-Vague prompts cause agents to overwrite critical logic. All architectural decisions, naming conventions, and methodologies must be fixed by the orchestrator before invoking a worker. Write the prompt like a finalized, non-negotiable ticket, not the start of a conversation. Always write subagent prompts in English, even if the user speaks another language or the codebase comments are in another language.
+Vague prompts cause agents to overwrite critical logic. Fix all architectural decisions, naming conventions, and methodologies before invoking a worker. Write the prompt like a finalized, non-negotiable ticket, not the start of a conversation. Always write subagent prompts in English, even if the user speaks another language or the codebase comments are in another language.
 
 ### Required Prompt Structure
 
